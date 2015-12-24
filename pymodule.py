@@ -46,17 +46,16 @@ def run_cctransort(name, **kwargs):
     kwargs = p4util.kwargs_lower(kwargs)
 
     # Your plugin's psi4 run sequence goes here
-    #psi4.set_global_option('BASIS', 'sto-3g')
+    if ('wfn' in kwargs):
+        if (kwargs['wfn'] == 'ccsd'):
+            psi4.set_global_option('WFN', 'CCSD')
+        elif (kwargs['wfn'] == 'ccsd(t)'):
+            psi4.set_global_option('WFN', 'CCSD_T')
     psi4.set_local_option('CCTRANSORT', 'PRINT', 1)
     scf_helper(name, **kwargs)
     returnvalue = psi4.plugin('cctransort.so')
-    psi4.set_variable('CURRENT ENERGY', returnvalue)
 
 
 # Integration with driver routines
 procedures['energy']['cctransort'] = run_cctransort
 
-
-def exampleFN():
-    # Your Python code goes here
-    pass
