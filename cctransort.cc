@@ -75,24 +75,14 @@ PsiReturnType cctransort(Options& options)
   shared_ptr<PSIO> psio(_default_psio_lib_);
   dpdbuf4 K;
   dpd_set_default(ints->get_dpd_id());
+
   ints->set_keep_dpd_so_ints(true);
-
-  outfile->Printf("[O,O] = %d\n", ID("[O,O]"));
-  outfile->Printf("[V,V] = %d\n", ID("[V,V]"));
-  outfile->Printf("[O,V] = %d\n", ID("[O,V]"));
-  outfile->Printf("[V,O] = %d\n", ID("[V,O]"));
-  outfile->Printf("[O>=O]+ = %d\n", ID("[O>=O]+"));
-  outfile->Printf("[V>=V]+ = %d\n", ID("[V>=V]+"));
-  outfile->Printf("[O>O]- = %d\n", ID("[O>O]-"));
-  outfile->Printf("[V>V]- = %d\n", ID("[V>V]-"));
-
-  ints->print_dpd_lookup();
-
   ints->transform_tei(MOSpace::occ, MOSpace::occ, MOSpace::occ, MOSpace::occ, IntegralTransform::MakeAndKeep);
   ints->transform_tei(MOSpace::occ, MOSpace::occ, MOSpace::occ, MOSpace::vir, IntegralTransform::ReadAndKeep);
   ints->transform_tei(MOSpace::occ, MOSpace::occ, MOSpace::vir, MOSpace::vir, IntegralTransform::ReadAndNuke);
   ints->transform_tei(MOSpace::occ, MOSpace::vir, MOSpace::occ, MOSpace::vir, IntegralTransform::MakeAndKeep);
   ints->transform_tei(MOSpace::occ, MOSpace::vir, MOSpace::vir, MOSpace::vir, IntegralTransform::ReadAndNuke);
+  ints->set_keep_dpd_so_ints(false);
   ints->transform_tei(MOSpace::vir, MOSpace::vir, MOSpace::vir, MOSpace::vir, IntegralTransform::MakeAndNuke);
 
   double efzc = ints->get_frozen_core_energy();
