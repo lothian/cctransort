@@ -5,6 +5,7 @@ sys.path.insert(0, './..')
 import cctransort
 
 molecule {
+0 1
 O
 H 1 R
 H 1 R 2 A
@@ -17,11 +18,10 @@ set {
   basis sto-3g
   freeze_core true
   reference rhf
-  print 6
 }
 
 set cctransort {
-  print 1
+  print 8
 }
 
 energy('cctransort')
