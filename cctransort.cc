@@ -44,6 +44,13 @@ int **cacheprep_rhf(int level, int *cachefiles);
 void cachedone_uhf(int **cachelist);
 void cachedone_rhf(int **cachelist);
 
+void c_sort(int reference);
+void d_sort(int reference);
+void e_sort(int reference);
+void f_sort(int reference);
+void d_spinad();
+void e_spinad();
+
 extern "C"
 int read_options(std::string name, Options& options)
 {
@@ -510,6 +517,21 @@ PsiReturnType cctransort(Options& options)
 
   }
   psio->close(PSIF_LIBTRANS_DPD, 0);
+
+  for(int i =PSIF_CC_MIN; i <= PSIF_CC_MAX; i++) psio->open(i,1);
+
+  c_sort(reference);
+  d_sort(reference);
+  e_sort(reference);
+  f_sort(reference);
+  if(reference == 0) {
+    d_spinad();
+    e_spinad();
+  }
+
+  for(int i=PSIF_CC_MIN; i < PSIF_CC_TMP; i++) psio->close(i,1);
+  for(int i=PSIF_CC_TMP; i <= PSIF_CC_TMP11; i++) psio->close(i,0); /* delete CC_TMP files */
+  for(int i=PSIF_CC_TMP11+1; i <= PSIF_CC_MAX; i++) psio->close(i,1);
 
   return Success;
 }
