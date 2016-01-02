@@ -20,10 +20,6 @@ set {
   reference rhf
 }
 
-set cctransort {
-  print 8
-}
-
 energy('cctransort')
 #energy('ccsd')
 

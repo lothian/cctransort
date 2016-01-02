@@ -49,7 +49,7 @@ int read_options(std::string name, Options& options)
 {
   if (name == "CCTRANSORT"|| options.read_globals()) {
     /*- The amount of information printed to the output file -*/
-    options.add_int("PRINT", 1);
+    options.add_int("PRINT_LEVEL", 1);
     options.add_str("REFERENCE", "RHF") ;
     options.add_str("WFN", "CCSD") ;
   }
@@ -60,7 +60,7 @@ int read_options(std::string name, Options& options)
 extern "C"
 PsiReturnType cctransort(Options& options)
 {
-  int print = options.get_int("PRINT");
+  int print = options.get_int("PRINT_LEVEL");
 
   boost::shared_ptr<PSIO> psio(_default_psio_lib_);
 
@@ -153,6 +153,7 @@ PsiReturnType cctransort(Options& options)
 
   outfile->Printf("\n\tWfn Parameters:\n");
   outfile->Printf("\t--------------------\n");
+  outfile->Printf("\tPrint Level          = %d\n",print);
   outfile->Printf("\tNumber of irreps     = %d\n",nirreps);
   outfile->Printf("\tNumber of MOs        = %d\n",nmo);
   outfile->Printf("\tNumber of active MOs = %d\n",nactive);
@@ -186,9 +187,6 @@ PsiReturnType cctransort(Options& options)
     outfile->Printf( "\tCalculation will continue with zero efzc...\n");
     efzc = 0.0;
   }
-
-  psio->tocprint(PSIF_OEI);
-  psio->tocprint(PSIF_LIBTRANS_DPD);
 
   psio->open(PSIF_LIBTRANS_DPD, PSIO_OPEN_OLD);
   dpdbuf4 K;
@@ -438,9 +436,6 @@ PsiReturnType cctransort(Options& options)
     DPDMOSpace vir('v', "abcdef", virtpi);
     spaces.push_back(occ);
     spaces.push_back(vir);
-
-    occ.print();
-    vir.print();
 
     if(dpd_list[0]) throw PSIEXCEPTION("Attempting to initilize new DPD instance before the old one was freed.");
     dpd_list[0] = new DPD(0, nirreps, Process::environment.get_memory(), 0, cachefiles, cachelist, NULL, 2, spaces);
