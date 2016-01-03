@@ -17,8 +17,7 @@ A = 104.5
 set {
   basis sto-3g
   freeze_core true
-  reference uhf
-  print_level 5
+  reference rohf
 }
 
 energy('cctransort')

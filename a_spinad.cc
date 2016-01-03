@@ -28,14 +28,14 @@
 
 namespace psi { namespace cctransort {
 
-void e_spinad(void)
+void a_spinad(void)
 {
-  dpdbuf4 E;
+  dpdbuf4 A;
 
-  global_dpd_->buf4_init(&E, PSIF_CC_EINTS, 0, 11, 0, 11, 0, 0, "E <ai|jk>");
-  global_dpd_->buf4_scmcopy(&E, PSIF_CC_EINTS, "E 2<ai|jk> - <ai|kj>", 2);
-  global_dpd_->buf4_sort_axpy(&E, PSIF_CC_EINTS, pqsr, 11, 0, "E 2<ai|jk> - <ai|kj>", -1);
-  global_dpd_->buf4_close(&E);
+  global_dpd_->buf4_init(&A, PSIF_CC_AINTS, 0, 0, 0, 0, 0, 0, "A <ij|kl>");
+  global_dpd_->buf4_scmcopy(&A, PSIF_CC_AINTS, "A 2<ij|kl> - <ij|lk>", 2);
+  global_dpd_->buf4_sort_axpy(&A, PSIF_CC_AINTS, pqsr, 0, 0, "A 2<ij|kl> - <ij|lk>", -1);
+  global_dpd_->buf4_close(&A);
 }
 
 }} // namespace psi::cctranssort

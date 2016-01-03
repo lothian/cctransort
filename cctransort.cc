@@ -53,6 +53,7 @@ void c_sort(int reference);
 void d_sort(int reference);
 void e_sort(int reference);
 void f_sort(int reference);
+void a_spinad();
 void d_spinad();
 void e_spinad();
 
@@ -61,7 +62,7 @@ void fock_rhf(boost::shared_ptr<Wavefunction> ref, vector<int> &occpi, vector<in
 void fock_uhf(boost::shared_ptr<Wavefunction> ref, vector<int> &aoccpi, vector<int> &boccpi,
               vector<int> &avirpi, vector<int> &bvirpi, vector<int> &frdocc, int print);
 
-double scf_check(int reference);
+double scf_check(int reference, vector<int> &openpi);
 
 extern "C"
 int read_options(std::string name, Options& options)
@@ -105,8 +106,6 @@ PsiReturnType cctransort(Options& options)
 
   int nirreps = ref->nirrep();
   int nmo = ref->nmo();
-  int nso = ref->nso();
-  int nao = ref->basisset()->nao();
   char **labels = ref->molecule()->irrep_labels();
   double enuc = ref->molecule()->nuclear_repulsion_energy();
   double escf;
@@ -258,6 +257,7 @@ PsiReturnType cctransort(Options& options)
   e_sort(reference);
   f_sort(reference);
   if(reference == 0) {
+    a_spinad();
     d_spinad();
     e_spinad();
   }
@@ -266,8 +266,9 @@ PsiReturnType cctransort(Options& options)
   if(reference == 2) fock_uhf(ref, aoccpi, boccpi, avirpi, bvirpi, frdocc, print);
   else fock_rhf(ref, occpi, openpi, virpi, frdocc, print);
 
-  double eref = scf_check(reference);
-  outfile->Printf("Reference energy = %20.14f\n", eref + enuc + efzc);
+  double eref = scf_check(reference, openpi) + enuc + efzc;
+  outfile->Printf("\tReference energy = %20.14f\n", eref);
+  psio->write_entry(PSIF_CC_INFO, "Reference Energy", (char *) &(eref), sizeof(double));
 
   for(int i=PSIF_CC_MIN; i < PSIF_CC_TMP; i++) psio->close(i,1);
   for(int i=PSIF_CC_TMP; i <= PSIF_CC_TMP11; i++) psio->close(i,0); /* delete CC_TMP files */
