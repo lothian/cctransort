@@ -267,6 +267,7 @@ PsiReturnType cctransort(Options& options)
   else fock_rhf(ref, occpi, openpi, virpi, frdocc, print);
 
   double eref = scf_check(reference);
+  outfile->Printf("Reference energy = %20.14f\n", eref + enuc + efzc);
 
   for(int i=PSIF_CC_MIN; i < PSIF_CC_TMP; i++) psio->close(i,1);
   for(int i=PSIF_CC_TMP; i <= PSIF_CC_TMP11; i++) psio->close(i,0); /* delete CC_TMP files */
