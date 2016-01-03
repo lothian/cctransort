@@ -24,8 +24,6 @@
     \ingroup CCSORT
     \brief Enter brief description of file here 
 */
-#include <cstdio>
-#include <cstdlib>
 #include <libdpd/dpd.h>
 
 namespace psi { namespace cctransort {
