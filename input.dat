@@ -20,6 +20,7 @@ set {
   reference rhf
 }
 
-#energy('cctransort')
-energy('ccsd')
+energy('cctransort')
+psi4.ccenergy()
+#energy('ccsd')
 
