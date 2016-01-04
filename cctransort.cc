@@ -53,6 +53,7 @@ void c_sort(int reference);
 void d_sort(int reference);
 void e_sort(int reference);
 void f_sort(int reference);
+void b_spinad();
 void a_spinad();
 void d_spinad();
 void e_spinad();
@@ -247,7 +248,7 @@ PsiReturnType cctransort(Options& options)
   psio->open(PSIF_LIBTRANS_DPD, PSIO_OPEN_OLD);
   if(reference == 2) sort_tei_uhf(psio, print);
   else sort_tei_rhf(psio, print);
-  psio->close(PSIF_LIBTRANS_DPD, 0);
+  psio->close(PSIF_LIBTRANS_DPD, 0); // delete file
 
   for(int i =PSIF_CC_MIN; i <= PSIF_CC_MAX; i++) psio->open(i,1);
 
@@ -257,6 +258,7 @@ PsiReturnType cctransort(Options& options)
   e_sort(reference);
   f_sort(reference);
   if(reference == 0) {
+    b_spinad();
     a_spinad();
     d_spinad();
     e_spinad();
