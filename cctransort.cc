@@ -44,7 +44,7 @@ int **cacheprep_rhf(int level, int *cachefiles);
 void cachedone_uhf(int **cachelist);
 void cachedone_rhf(int **cachelist);
 
-void cc_memcheck(int reference);
+void memcheck(int reference);
 
 void sort_tei_rhf(boost::shared_ptr<PSIO> psio, int print);
 void sort_tei_uhf(boost::shared_ptr<PSIO> psio, int print);
@@ -144,36 +144,35 @@ PsiReturnType cctransort(Options& options)
   psio->write_entry(PSIF_CC_INFO, "No. of Active Orbitals", (char *) &(nactive), sizeof(int));
 
   vector<int> aoccpi, boccpi, avirpi, bvirpi;
+  vector<int> cc_aocc, cc_bocc, cc_avir, cc_bvir;
+  vector<int> qt_aocc, qt_bocc, qt_avir, qt_bvir;
+  vector<int> aocc_sym, bocc_sym, avir_sym, bvir_sym;
+  vector<int> aocc_off, bocc_off, avir_off, bvir_off;
   vector<int> occpi, virpi;
-  if(reference == 2) { // UHF or semicanonical
+  vector<int> cc_occ, cc_vir;
+  vector<int> qt_occ, qt_vir;
+  vector<int> occ_sym, vir_sym;
+  vector<int> occ_off, vir_off;
+  if(reference == 2) { // UHF/semicanonical
+
     for(int h=0; h < nirreps; h++) {
       aoccpi.push_back(clsdpi[h] + openpi[h]);
       boccpi.push_back(clsdpi[h]);
       avirpi.push_back(uoccpi[h]);
       bvirpi.push_back(uoccpi[h] + openpi[h]);
     }
-    psio->write_entry(PSIF_CC_INFO, "Active Alpha Occ Orbs Per Irrep", (char *) aoccpi.data(), sizeof(int)*nirreps);
-    psio->write_entry(PSIF_CC_INFO, "Active Beta Occ Orbs Per Irrep", (char *) boccpi.data(), sizeof(int)*nirreps);
-    psio->write_entry(PSIF_CC_INFO, "Active Alpha Virt Orbs Per Irrep", (char *) avirpi.data(), sizeof(int)*nirreps);
-    psio->write_entry(PSIF_CC_INFO, "Active Beta Virt Orbs Per Irrep", (char *) bvirpi.data(), sizeof(int)*nirreps);
-  }
-  else { // RHF or ROHF
-    for(int h=0; h < nirreps; h++) {
-      occpi.push_back(clsdpi[h] + openpi[h]);
-      virpi.push_back(uoccpi[h] + openpi[h]);
-    }
-    psio->write_entry(PSIF_CC_INFO, "Active Occ Orbs Per Irrep", (char *) occpi.data(), sizeof(int)*nirreps);
-    psio->write_entry(PSIF_CC_INFO, "Active Virt Orbs Per Irrep", (char *) virpi.data(), sizeof(int)*nirreps);
-  }
 
-  vector<int> cc_aocc, cc_bocc, cc_avir, cc_bvir;
-  vector<int> qt_aocc, qt_bocc, qt_avir, qt_bvir;
-  vector<int> aocc_sym, bocc_sym, avir_sym, bvir_sym;
-  vector<int> aocc_off, bocc_off, avir_off, bvir_off;
-  vector<int> cc_occ, cc_vir;
-  vector<int> qt_occ, qt_vir;
-  vector<int> occ_sym, vir_sym;
-  if(reference == 2) {
+    int aocount = aoccpi[0]; 
+    int avcount = avirpi[0];
+    int bocount = boccpi[0]; 
+    int bvcount = bvirpi[0];
+    for(int h=1; h < nirreps; h++) {
+      aocc_off.push_back(aocount); aocount += aoccpi[h];
+      avir_off.push_back(avcount); avcount += avirpi[h];
+      bocc_off.push_back(bocount); bocount += boccpi[h];
+      bvir_off.push_back(bvcount); bvcount += bvirpi[h];
+    }
+
     cc_aocc.assign(nactive, -1); cc_bocc.assign(nactive, -1);
     cc_avir.assign(nactive, -1); cc_bvir.assign(nactive, -1);
     qt_aocc.assign(nactive, -1); qt_bocc.assign(nactive, -1);
@@ -212,6 +211,15 @@ PsiReturnType cctransort(Options& options)
         bvir_sym[count] = h;
       }
     }
+
+    psio->write_entry(PSIF_CC_INFO, "Active Alpha Occ Orbs Per Irrep", (char *) aoccpi.data(), sizeof(int)*nirreps);
+    psio->write_entry(PSIF_CC_INFO, "Active Beta Occ Orbs Per Irrep", (char *) boccpi.data(), sizeof(int)*nirreps);
+    psio->write_entry(PSIF_CC_INFO, "Active Alpha Virt Orbs Per Irrep", (char *) avirpi.data(), sizeof(int)*nirreps);
+    psio->write_entry(PSIF_CC_INFO, "Active Beta Virt Orbs Per Irrep", (char *) bvirpi.data(), sizeof(int)*nirreps);
+    psio->write_entry(PSIF_CC_INFO, "Active Alpha Occ Orb Offsets", (char *) aocc_off.data(), sizeof(int)*nirreps);
+    psio->write_entry(PSIF_CC_INFO, "Active Beta Occ Orb Offsets", (char *) bocc_off.data(), sizeof(int)*nirreps);
+    psio->write_entry(PSIF_CC_INFO, "Active Alpha Virt Orb Offsets", (char *) avir_off.data(),  sizeof(int)*nirreps);
+    psio->write_entry(PSIF_CC_INFO, "Active Beta Virt Orb Offsets", (char *) bvir_off.data(),  sizeof(int)*nirreps);
     psio->write_entry(PSIF_CC_INFO, "Active Alpha Occ Orb Symmetry", (char *) aocc_sym.data(), sizeof(int)*nactive);
     psio->write_entry(PSIF_CC_INFO, "Active Beta Occ Orb Symmetry", (char *) bocc_sym.data(), sizeof(int)*nactive);
     psio->write_entry(PSIF_CC_INFO, "Active Alpha Virt Orb Symmetry", (char *) avir_sym.data(), sizeof(int)*nactive);
@@ -225,7 +233,19 @@ PsiReturnType cctransort(Options& options)
     psio->write_entry(PSIF_CC_INFO, "CC->QT Alpha Active Virt Order", (char *) qt_avir.data(), sizeof(int)*nactive);
     psio->write_entry(PSIF_CC_INFO, "CC->QT Beta Active Virt Order", (char *) qt_bvir.data(), sizeof(int)*nactive);
   }
-  else {
+  else { // RHF/ROHF
+    for(int h=0; h < nirreps; h++) {
+      occpi.push_back(clsdpi[h] + openpi[h]);
+      virpi.push_back(uoccpi[h] + openpi[h]);
+    }
+
+    int ocount = occpi[0]; 
+    int vcount = virpi[0];
+    for(int h=1; h < nirreps; h++) {
+      occ_off.push_back(ocount); ocount += occpi[h];
+      vir_off.push_back(vcount); vcount += virpi[h];
+    }
+
     cc_occ.assign(nactive, -1); cc_vir.assign(nactive, -1);
     qt_occ.assign(nactive, -1); qt_vir.assign(nactive, -1);
     occ_sym.assign(nactive, -1); vir_sym.assign(nactive, -1);
@@ -243,8 +263,7 @@ PsiReturnType cctransort(Options& options)
         occ_sym[count] = h;
       }
     }
-
-    for(int h=0, vr_offset=nclsd+nopen, op_offset=nclsd; h < nirreps; h++) {
+    for(int h=0, count=0, vr_offset=nclsd+nopen, op_offset=nclsd; h < nirreps; h++) {
       if(h) vr_offset += uoccpi[h-1];
       for(int i=0; i < uoccpi[h]; i++, count++) {
         cc_vir[vr_offset+i] = count;
@@ -258,6 +277,11 @@ PsiReturnType cctransort(Options& options)
         vir_sym[count] = h;
       }
     }
+
+    psio->write_entry(PSIF_CC_INFO, "Active Occ Orbs Per Irrep", (char *) occpi.data(), sizeof(int)*nirreps);
+    psio->write_entry(PSIF_CC_INFO, "Active Virt Orbs Per Irrep", (char *) virpi.data(), sizeof(int)*nirreps);
+    psio->write_entry(PSIF_CC_INFO, "Active Occ Orb Offsets", (char *) occ_off.data(), sizeof(int)*nirreps);
+    psio->write_entry(PSIF_CC_INFO, "Active Virt Orb Offsets", (char *) vir_off.data(), sizeof(int)*nirreps);
     psio->write_entry(PSIF_CC_INFO, "Active Occ Orb Symmetry", (char *) occ_sym.data(), sizeof(int)*nactive);
     psio->write_entry(PSIF_CC_INFO, "Active Virt Orb Symmetry", (char *) vir_sym.data(), sizeof(int)*nactive);
     psio->write_entry(PSIF_CC_INFO, "QT->CC Active Occ Order", (char *) cc_occ.data(), sizeof(int)*nactive);
@@ -342,7 +366,7 @@ PsiReturnType cctransort(Options& options)
     global_dpd_ = dpd_list[0];
   }
 
-  cc_memcheck(reference);
+  memcheck(reference);
 
   // Sort integrals into main categories
   psio->open(PSIF_LIBTRANS_DPD, PSIO_OPEN_OLD);

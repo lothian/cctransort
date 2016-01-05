@@ -28,7 +28,7 @@
 
 namespace psi { namespace cctransort {
 
-void cc_memcheck(int reference)
+void memcheck(int reference)
 {
   unsigned long int irrep_size, size;
   dpdbuf4 Z;

@@ -58,9 +58,7 @@ void b_spinad(void)
     global_dpd_->buf4_mat_irrep_row_close(&Bs, h);
     global_dpd_->buf4_mat_irrep_row_close(&B, h);
   }
-  global_dpd_->buf4_print(&Ba, "outfile", 1);
   global_dpd_->buf4_close(&Ba);
-  global_dpd_->buf4_print(&Bs, "outfile", 1);
   global_dpd_->buf4_close(&Bs);
   global_dpd_->buf4_close(&B);
 }
