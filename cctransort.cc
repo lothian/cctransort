@@ -65,6 +65,9 @@ void fock_uhf(boost::shared_ptr<Wavefunction> ref, vector<int> &aoccpi, vector<i
 
 double scf_check(int reference, vector<int> &openpi);
 
+void denom_rhf(vector<int> &openpi);
+void denom_uhf();
+
 extern "C"
 int read_options(std::string name, Options& options)
 {
@@ -115,7 +118,13 @@ PsiReturnType cctransort(Options& options)
   else
       escf = ref->reference_energy();
 
-  vector<int> orbspi, openpi, clsdpi, frdocc, fruocc;
+//  vector<int> orbspi, openpi, clsdpi, frdocc, fruocc;
+  Dimension orbspi = ref->nmopi();
+  Dimension openpi = ref->soccpi();
+  Dimension clsdpi = ref->doccpi();
+  Dimension frdocc = ref->frzcpi();
+  Dimension fruocc = ref->frzvpi();
+/*
   for(int h = 0; h < nirreps; ++h) {
     orbspi.push_back(ref->nmopi()[h]);
     openpi.push_back(ref->soccpi()[h]);
@@ -123,6 +132,7 @@ PsiReturnType cctransort(Options& options)
     frdocc.push_back(ref->frzcpi()[h]); 
     fruocc.push_back(ref->frzvpi()[h]);
   }
+*/
 
   int nfzc = 0; int nfzv = 0;
   for(int h=0; h < nirreps; h++) { nfzc += frdocc[h]; nfzv += fruocc[h]; }
@@ -139,16 +149,16 @@ PsiReturnType cctransort(Options& options)
   psio->open(PSIF_CC_INFO, PSIO_OPEN_OLD);
 
   psio->write_entry(PSIF_CC_INFO, "Reference Wavefunction", (char *) &(reference), sizeof(int));
-  psio->write_entry(PSIF_CC_INFO, "Frozen Core Orbs Per Irrep", (char *) frdocc.data(), sizeof(int)*nirreps);
-  psio->write_entry(PSIF_CC_INFO, "Frozen Virt Orbs Per Irrep", (char *) fruocc.data(), sizeof(int)*nirreps);
+  psio->write_entry(PSIF_CC_INFO, "Frozen Core Orbs Per Irrep", (char *) (int *) frdocc, sizeof(int)*nirreps);
+  psio->write_entry(PSIF_CC_INFO, "Frozen Virt Orbs Per Irrep", (char *) (int *) fruocc, sizeof(int)*nirreps);
   psio->write_entry(PSIF_CC_INFO, "No. of Active Orbitals", (char *) &(nactive), sizeof(int));
 
-  vector<int> aoccpi, boccpi, avirpi, bvirpi;
+  Dimension aoccpi, boccpi, avirpi, bvirpi;
+  Dimension occpi, virpi;
   vector<int> cc_aocc, cc_bocc, cc_avir, cc_bvir;
   vector<int> qt_aocc, qt_bocc, qt_avir, qt_bvir;
   vector<int> aocc_sym, bocc_sym, avir_sym, bvir_sym;
   vector<int> aocc_off, bocc_off, avir_off, bvir_off;
-  vector<int> occpi, virpi;
   vector<int> cc_occ, cc_vir;
   vector<int> qt_occ, qt_vir;
   vector<int> occ_sym, vir_sym;
@@ -156,12 +166,16 @@ PsiReturnType cctransort(Options& options)
   if(reference == 2) { // UHF/semicanonical
 
     for(int h=0; h < nirreps; h++) {
-      aoccpi.push_back(clsdpi[h] + openpi[h]);
-      boccpi.push_back(clsdpi[h]);
-      avirpi.push_back(uoccpi[h]);
-      bvirpi.push_back(uoccpi[h] + openpi[h]);
+      aoccpi.set(h, clsdpi[h] + openpi[h]);
+      boccpi.set(h, clsdpi[h]);
+      avirpi.set(h, uoccpi[h]);
+      bvirpi.set(h, uoccpi[h] + openpi[h]);
     }
 
+    aocc_off.push_back(0);
+    avir_off.push_back(0);
+    bocc_off.push_back(0);
+    bvir_off.push_back(0);
     int aocount = aoccpi[0]; 
     int avcount = avirpi[0];
     int bocount = boccpi[0]; 
@@ -212,10 +226,10 @@ PsiReturnType cctransort(Options& options)
       }
     }
 
-    psio->write_entry(PSIF_CC_INFO, "Active Alpha Occ Orbs Per Irrep", (char *) aoccpi.data(), sizeof(int)*nirreps);
-    psio->write_entry(PSIF_CC_INFO, "Active Beta Occ Orbs Per Irrep", (char *) boccpi.data(), sizeof(int)*nirreps);
-    psio->write_entry(PSIF_CC_INFO, "Active Alpha Virt Orbs Per Irrep", (char *) avirpi.data(), sizeof(int)*nirreps);
-    psio->write_entry(PSIF_CC_INFO, "Active Beta Virt Orbs Per Irrep", (char *) bvirpi.data(), sizeof(int)*nirreps);
+    psio->write_entry(PSIF_CC_INFO, "Active Alpha Occ Orbs Per Irrep", (char *) (int *) aoccpi, sizeof(int)*nirreps);
+    psio->write_entry(PSIF_CC_INFO, "Active Beta Occ Orbs Per Irrep", (char *) (int *) boccpi, sizeof(int)*nirreps);
+    psio->write_entry(PSIF_CC_INFO, "Active Alpha Virt Orbs Per Irrep", (char *) (int *) avirpi, sizeof(int)*nirreps);
+    psio->write_entry(PSIF_CC_INFO, "Active Beta Virt Orbs Per Irrep", (char *) (int *) bvirpi, sizeof(int)*nirreps);
     psio->write_entry(PSIF_CC_INFO, "Active Alpha Occ Orb Offsets", (char *) aocc_off.data(), sizeof(int)*nirreps);
     psio->write_entry(PSIF_CC_INFO, "Active Beta Occ Orb Offsets", (char *) bocc_off.data(), sizeof(int)*nirreps);
     psio->write_entry(PSIF_CC_INFO, "Active Alpha Virt Orb Offsets", (char *) avir_off.data(),  sizeof(int)*nirreps);
@@ -235,10 +249,12 @@ PsiReturnType cctransort(Options& options)
   }
   else { // RHF/ROHF
     for(int h=0; h < nirreps; h++) {
-      occpi.push_back(clsdpi[h] + openpi[h]);
-      virpi.push_back(uoccpi[h] + openpi[h]);
+      occpi.set(h, clsdpi[h] + openpi[h]);
+      virpi.set(h, uoccpi[h] + openpi[h]);
     }
 
+    occ_off.push_back(0);
+    vir_off.push_back(0);
     int ocount = occpi[0]; 
     int vcount = virpi[0];
     for(int h=1; h < nirreps; h++) {
@@ -391,6 +407,9 @@ PsiReturnType cctransort(Options& options)
   // Organize Fock matrices
   if(reference == 2) fock_uhf(ref, aoccpi, boccpi, avirpi, bvirpi, frdocc, print);
   else fock_rhf(ref, occpi, openpi, virpi, frdocc, print);
+
+  if(reference == 2) denom_uhf();
+  else denom_rhf(openpi);
 
   double eref = scf_check(reference, openpi) + enuc + efzc;
   outfile->Printf("\tReference energy = %20.14f\n", eref);

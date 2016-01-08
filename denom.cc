@@ -20,20 +20,12 @@
  *@END LICENSE
  */
 
+#include <vector>
 #include <libdpd/dpd.h>
 
 namespace psi { namespace cctransort {
 
-void denom_rhf(vector(int> &openpi);
-void denom_uhf(vector(int> &openpi);
-
-void denom(int reference, vector<int> &openpi)
-{
-  if(reference == 2) denom_uhf(vector<int> &openpi);
-  else denom_rhf(vector<int> &openpi);
-}
-
-void denom_uhf(vector<int> &openpi)
+void denom_uhf()
 {
   dpdfile2 d1, fIJ, fij, fAB, fab;
   dpdbuf4 d2;
@@ -85,7 +77,7 @@ void denom_uhf(vector<int> &openpi)
   global_dpd_->file2_close(&d1);
 
   global_dpd_->buf4_init(&d2, PSIF_CC_DENOM, 0, "I>J+", "A>B+", 0, "dIJAB");
-  for(int h=0; h < nirreps; h++) {
+  for(int h=0; h < d2.params->nirreps; h++) {
       global_dpd_->buf4_mat_irrep_init(&d2, h);
       for(int ij=0; ij < d2.params->rowtot[h]; ij++) {
 	  int i = d2.params->roworb[h][ij][0];
@@ -116,7 +108,7 @@ void denom_uhf(vector<int> &openpi)
   global_dpd_->buf4_close(&d2);
 
   global_dpd_->buf4_init(&d2, PSIF_CC_DENOM, 0, "i>j+", "a>b+", 0, "dijab");
-  for(int h=0; h < nirreps; h++) {
+  for(int h=0; h < d2.params->nirreps; h++) {
       global_dpd_->buf4_mat_irrep_init(&d2, h);
       for(int ij=0; ij < d2.params->rowtot[h]; ij++) {
           int i = d2.params->roworb[h][ij][0];
@@ -147,7 +139,7 @@ void denom_uhf(vector<int> &openpi)
   global_dpd_->buf4_close(&d2);
 
   global_dpd_->buf4_init(&d2, PSIF_CC_DENOM, 0, "Ij", "Ab", 0, "dIjAb");
-  for(int h=0; h < nirreps; h++) {
+  for(int h=0; h < d2.params->nirreps; h++) {
       global_dpd_->buf4_mat_irrep_init(&d2, h);
       for(int ij=0; ij < d2.params->rowtot[h]; ij++) {
           int i = d2.params->roworb[h][ij][0];
@@ -210,7 +202,7 @@ void denom_rhf(vector<int> &openpi)
   global_dpd_->file2_mat_rd(&fab);
 
   global_dpd_->file2_init(&d1, PSIF_CC_OEI, 0, 0, 1, "dIA");
-  global_dpd_->file2_mat_init(&dIA);
+  global_dpd_->file2_mat_init(&d1);
   for(int h=0; h < d1.params->nirreps; h++) {
       for(int i=0; i < d1.params->ppi[h]; i++) {
 	  double fii = fIJ.matrix[h][i][i];
@@ -226,7 +218,7 @@ void denom_rhf(vector<int> &openpi)
 
   global_dpd_->file2_init(&d1, PSIF_CC_OEI, 0, 0, 1, "dia");
   global_dpd_->file2_mat_init(&d1);
-  for(int h=0; h < nirreps; h++) {
+  for(int h=0; h < d1.params->nirreps; h++) {
       for(int i=0; i < d1.params->ppi[h] - openpi[h]; i++) {
 	  double fii = fij.matrix[h][i][i];
 	  for(int a=0; a < d1.params->qpi[h]; a++) {
@@ -239,8 +231,8 @@ void denom_rhf(vector<int> &openpi)
   global_dpd_->file2_mat_close(&d1);
   global_dpd_->file2_close(&d1);
 
-  global_dpd_->buf4_init(&d2, PSIF_CC_DENOM, 0, "i>j+", "a>b+", "dIJAB");
-  for(int h=0; h < nirreps; h++) {
+  global_dpd_->buf4_init(&d2, PSIF_CC_DENOM, 0, "i>j+", "a>b+", 0, "dIJAB");
+  for(int h=0; h < d1.params->nirreps; h++) {
       global_dpd_->buf4_mat_irrep_init(&d2, h);
       for(int ij=0; ij < d2.params->rowtot[h]; ij++) {
 	  int i = d2.params->roworb[h][ij][0];
@@ -260,8 +252,8 @@ void denom_rhf(vector<int> &openpi)
 	      int B = b - d2.params->roff[bsym];
 	      double faa = fAB.matrix[asym][A][A];
 	      double fbb = fAB.matrix[bsym][B][B];
-	      d2.matrix[h][ij][ab] = ((A >= (virtpi[asym] - openpi[asym])) || (B >= (virtpi[bsym] - openpi[bsym])) ?
-		 0.0 : 1.0/(fii + fjj - faa - fbb));
+	      d2.matrix[h][ij][ab] = ((A >= (d2.params->rpi[asym] - openpi[asym])) || (B >= (d2.params->spi[bsym] - openpi[bsym])) ?
+		                      0.0 : 1.0/(fii + fjj - faa - fbb));
 	    }
 	}
       global_dpd_->buf4_mat_irrep_wrt(&d2, h);
@@ -290,7 +282,7 @@ void denom_rhf(vector<int> &openpi)
 	      int B = b - d2.params->soff[bsym];
 	      double faa = fab.matrix[asym][A][A];
 	      double fbb = fab.matrix[bsym][B][B];
-	      d2.matrix[h][ij][ab] = ((I >= (occpi[isym] - openpi[isym])) || (J >= (occpi[jsym] - openpi[jsym])) ?
+	      d2.matrix[h][ij][ab] = ((I >= (d2.params->ppi[isym] - openpi[isym])) || (J >= (d2.params->qpi[jsym] - openpi[jsym])) ?
 		 0.0 : 1.0/(fii + fjj - faa - fbb));
 	    }
 	}
@@ -300,7 +292,7 @@ void denom_rhf(vector<int> &openpi)
   global_dpd_->buf4_close(&d2);
 
   global_dpd_->buf4_init(&d2, PSIF_CC_DENOM, 0, "ij", "ab", 0, "dIjAb");
-  for(int h=0; h < nirreps; h++) {
+  for(int h=0; h < d2.params->nirreps; h++) {
       global_dpd_->buf4_mat_irrep_init(&d2, h);
       for(int ij=0; ij < d2.params->rowtot[h]; ij++) {
 	  int i = d2.params->roworb[h][ij][0];
@@ -320,7 +312,7 @@ void denom_rhf(vector<int> &openpi)
 	      int B = b - d2.params->soff[bsym];
 	      double faa = fAB.matrix[asym][A][A];
 	      double fbb = fab.matrix[bsym][B][B];
-	      d2.matrix[h][ij][ab] = ((A >= (virtpi[asym] - openpi[asym])) || (J >= (occpi[jsym] - openpi[jsym])) ?
+	      d2.matrix[h][ij][ab] = ((A >= (d2.params->rpi[asym] - openpi[asym])) || (J >= (d2.params->qpi[jsym] - openpi[jsym])) ?
 		 0.0 : 1.0/(fii + fjj - faa - fbb));
 	    }
 	}

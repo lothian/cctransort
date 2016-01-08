@@ -15,12 +15,12 @@ A = 104.5
 }
 
 set {
-  basis DZP
+  basis sto-3g
   freeze_core true
   reference rhf
 }
 
 energy('cctransort')
-psi4.ccenergy()
+#psi4.ccenergy()
 #energy('ccsd')
 
