@@ -21,10 +21,11 @@
  */
 
 #include <libdpd/dpd.h>
+#include <libpsio/psio.h>
 
 namespace psi { namespace cctransort {
 
-void b_spinad(void)
+void b_spinad(boost::shared_ptr<PSIO> psio)
 {
   dpdbuf4 B, Bs, Ba;
 
@@ -61,6 +62,50 @@ void b_spinad(void)
   global_dpd_->buf4_close(&Ba);
   global_dpd_->buf4_close(&Bs);
   global_dpd_->buf4_close(&B);
+
+  /* Generate <ab|cc> components of B(+) */
+
+  global_dpd_->buf4_init(&Bs, PSIF_CC_BINTS, 0, 8, 8, 8, 8, 0, "B(+) <ab|cd> + <ab|dc>");
+  int nvirt = 0;
+  for(int h=0; h < Bs.params->nirreps; h++) nvirt += Bs.params->ppi[h];
+
+  int rows_per_bucket = dpd_memfree()/(Bs.params->coltot[0] + nvirt);
+  if(rows_per_bucket > Bs.params->rowtot[0]) rows_per_bucket = Bs.params->rowtot[0];
+  int nbuckets = (int) ceil((double) Bs.params->rowtot[0]/(double) rows_per_bucket);
+  int rows_left = Bs.params->rowtot[0] % rows_per_bucket;
+
+  global_dpd_->buf4_mat_irrep_init_block(&Bs, 0, rows_per_bucket);
+  double **B_diag = global_dpd_->dpd_block_matrix(rows_per_bucket, nvirt);
+
+  psio_address next = PSIO_ZERO;
+  int m;
+  for(m=0; m < (rows_left ? nbuckets-1:nbuckets); m++) {
+    int row_start = m * rows_per_bucket;
+    global_dpd_->buf4_mat_irrep_rd_block(&Bs, 0, row_start, rows_per_bucket);
+    for(int ab=0; ab < rows_per_bucket; ab++)
+      for(int Gc=0; Gc < Bs.params->nirreps; Gc++)
+        for(int C=0; C < Bs.params->rpi[Gc]; C++) {
+          int c = Bs.params->roff[Gc] + C;
+          int cc = Bs.params->colidx[c][c];
+          B_diag[ab][c] = Bs.matrix[0][ab][cc];
+        }
+    psio->write(PSIF_CC_BINTS, "B(+) <ab|cc>", (char *) B_diag[0], rows_per_bucket*nvirt*sizeof(double), next, &next);
+  }
+  if(rows_left) {
+    int row_start = m * rows_per_bucket;
+    global_dpd_->buf4_mat_irrep_rd_block(&Bs, 0, row_start, rows_left);
+    for(int ab=0; ab < rows_left; ab++)
+      for(int Gc=0; Gc < Bs.params->nirreps; Gc++)
+        for(int C=0; C < Bs.params->rpi[Gc]; C++) {
+          int c = Bs.params->roff[Gc] + C;
+          int cc = Bs.params->colidx[c][c];
+          B_diag[ab][c] = Bs.matrix[0][ab][cc];
+        }
+    psio->write(PSIF_CC_BINTS, "B(+) <ab|cc>", (char *) B_diag[0], rows_left*nvirt*sizeof(double), next, &next);
+  }
+  global_dpd_->free_dpd_block(B_diag, rows_per_bucket, nvirt);
+  global_dpd_->buf4_mat_irrep_close_block(&Bs, 0, rows_per_bucket);
+  global_dpd_->buf4_close(&Bs);
 }
 
 }} // namespace psi::cctranssort

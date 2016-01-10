@@ -26,6 +26,7 @@
 #include <libparallel/parallel.h>
 #include <liboptions/liboptions.h>
 #include <libmints/mints.h>
+#include <libmints/view.h>
 #include <libpsio/psio.hpp>
 #include <libciomr/libciomr.h>
 
@@ -53,19 +54,19 @@ void c_sort(int reference);
 void d_sort(int reference);
 void e_sort(int reference);
 void f_sort(int reference);
-void b_spinad();
+void b_spinad(boost::shared_ptr<PSIO>);
 void a_spinad();
 void d_spinad();
 void e_spinad();
 
-void fock_rhf(boost::shared_ptr<Wavefunction> ref, vector<int> &occpi, vector<int> &openpi,
-              vector<int> &virpi, vector<int> &frdocc, int print);
-void fock_uhf(boost::shared_ptr<Wavefunction> ref, vector<int> &aoccpi, vector<int> &boccpi,
-              vector<int> &avirpi, vector<int> &bvirpi, vector<int> &frdocc, int print);
+void fock_rhf(boost::shared_ptr<Wavefunction> ref, Dimension &occpi, Dimension &openpi,
+              Dimension &virpi, Dimension &frdocc, int print);
+void fock_uhf(boost::shared_ptr<Wavefunction> ref, Dimension &aoccpi, Dimension &boccpi,
+              Dimension &avirpi, Dimension &bvirpi, Dimension &frdocc, int print);
 
-double scf_check(int reference, vector<int> &openpi);
+double scf_check(int reference, Dimension &openpi);
 
-void denom_rhf(vector<int> &openpi);
+void denom_rhf(Dimension &openpi);
 void denom_uhf();
 
 extern "C"
@@ -118,28 +119,19 @@ PsiReturnType cctransort(Options& options)
   else
       escf = ref->reference_energy();
 
-//  vector<int> orbspi, openpi, clsdpi, frdocc, fruocc;
-  Dimension orbspi = ref->nmopi();
+  Dimension nmopi = ref->nmopi();
+  Dimension nsopi = ref->nsopi();
   Dimension openpi = ref->soccpi();
   Dimension clsdpi = ref->doccpi();
   Dimension frdocc = ref->frzcpi();
   Dimension fruocc = ref->frzvpi();
-/*
-  for(int h = 0; h < nirreps; ++h) {
-    orbspi.push_back(ref->nmopi()[h]);
-    openpi.push_back(ref->soccpi()[h]);
-    clsdpi.push_back(ref->doccpi()[h]);
-    frdocc.push_back(ref->frzcpi()[h]); 
-    fruocc.push_back(ref->frzvpi()[h]);
-  }
-*/
 
   int nfzc = 0; int nfzv = 0;
   for(int h=0; h < nirreps; h++) { nfzc += frdocc[h]; nfzv += fruocc[h]; }
   for(int h=0; h < nirreps; h++) clsdpi[h] -= frdocc[h];
 
   vector<int> uoccpi;
-  for(int h=0; h < nirreps; h++) uoccpi.push_back(orbspi[h] - clsdpi[h] - openpi[h] - fruocc[h] - frdocc[h]);
+  for(int h=0; h < nirreps; h++) uoccpi.push_back(nmopi[h] - clsdpi[h] - openpi[h] - fruocc[h] - frdocc[h]);
   int nclsd = 0; int nopen = 0; int nuocc = 0;
   for(int h=0; h < nirreps; h++) {
     nclsd += clsdpi[h]; nopen += openpi[h]; nuocc += uoccpi[h];
@@ -153,8 +145,8 @@ PsiReturnType cctransort(Options& options)
   psio->write_entry(PSIF_CC_INFO, "Frozen Virt Orbs Per Irrep", (char *) (int *) fruocc, sizeof(int)*nirreps);
   psio->write_entry(PSIF_CC_INFO, "No. of Active Orbitals", (char *) &(nactive), sizeof(int));
 
-  Dimension aoccpi, boccpi, avirpi, bvirpi;
-  Dimension occpi, virpi;
+  Dimension aoccpi(nirreps), boccpi(nirreps), avirpi(nirreps), bvirpi(nirreps);
+  Dimension occpi(nirreps), virpi(nirreps);
   vector<int> cc_aocc, cc_bocc, cc_avir, cc_bvir;
   vector<int> qt_aocc, qt_bocc, qt_avir, qt_bvir;
   vector<int> aocc_sym, bocc_sym, avir_sym, bvir_sym;
@@ -294,8 +286,8 @@ PsiReturnType cctransort(Options& options)
       }
     }
 
-    psio->write_entry(PSIF_CC_INFO, "Active Occ Orbs Per Irrep", (char *) occpi.data(), sizeof(int)*nirreps);
-    psio->write_entry(PSIF_CC_INFO, "Active Virt Orbs Per Irrep", (char *) virpi.data(), sizeof(int)*nirreps);
+    psio->write_entry(PSIF_CC_INFO, "Active Occ Orbs Per Irrep", (char *) (int *) occpi, sizeof(int)*nirreps);
+    psio->write_entry(PSIF_CC_INFO, "Active Virt Orbs Per Irrep", (char *) (int *) virpi, sizeof(int)*nirreps);
     psio->write_entry(PSIF_CC_INFO, "Active Occ Orb Offsets", (char *) occ_off.data(), sizeof(int)*nirreps);
     psio->write_entry(PSIF_CC_INFO, "Active Virt Orb Offsets", (char *) vir_off.data(), sizeof(int)*nirreps);
     psio->write_entry(PSIF_CC_INFO, "Active Occ Orb Symmetry", (char *) occ_sym.data(), sizeof(int)*nactive);
@@ -319,7 +311,7 @@ PsiReturnType cctransort(Options& options)
             "\t-----\t-----\t------\t------\t------\t------\t------\n");
   for(int i=0; i < nirreps; i++) {
     outfile->Printf("\t %s\t   %d\t    %d\t    %d\t    %d\t    %d\t    %d\n",
-                    labels[i],orbspi[i],frdocc[i],clsdpi[i],openpi[i],uoccpi[i],fruocc[i]);
+                    labels[i],nmopi[i],frdocc[i],clsdpi[i],openpi[i],uoccpi[i],fruocc[i]);
   }
   outfile->Printf("\tNuclear Rep. energy    =  %20.14f\n", enuc);
   outfile->Printf(  "\tSCF energy             =  %20.14f\n", escf);
@@ -398,7 +390,7 @@ PsiReturnType cctransort(Options& options)
   e_sort(reference);
   f_sort(reference);
   if(reference == 0) {
-    b_spinad();
+    b_spinad(psio);
     a_spinad();
     d_spinad();
     e_spinad();
@@ -412,8 +404,59 @@ PsiReturnType cctransort(Options& options)
   else denom_rhf(openpi);
 
   double eref = scf_check(reference, openpi) + enuc + efzc;
-  outfile->Printf("\tReference energy = %20.14f\n", eref);
+  outfile->Printf("\tReference energy       = %20.14f\n", eref);
   psio->write_entry(PSIF_CC_INFO, "Reference Energy", (char *) &(eref), sizeof(double));
+
+  SharedMatrix Ca_vir, Cb_vir, Ca_occ;
+  Dimension zero(nirreps);
+  psio_address next;
+  if(reference == 2) {
+    View VCa_vir(ref->Ca(), nsopi, avirpi, zero, aoccpi+frdocc);
+    Ca_vir = VCa_vir();
+    Ca_vir->set_name("Alpha virtual orbitals");
+
+    next = PSIO_ZERO;
+    for(int h=0; h < nirreps; h++)
+      if(avirpi[h])
+        psio->write(PSIF_CC_INFO, "UHF Active Alpha Virtual Orbs", (char *) Ca_vir->pointer(h)[0],
+                    nsopi[h]*avirpi[h]*sizeof(double), next, &next);
+
+    View VCb_vir(ref->Cb(), nsopi, bvirpi, zero, boccpi+frdocc);
+    Cb_vir = VCb_vir();
+    Cb_vir->set_name("Beta virtual orbitals");
+
+    next = PSIO_ZERO;
+    for(int h=0; h < nirreps; h++)
+      if(bvirpi[h])
+        psio->write(PSIF_CC_INFO, "UHF Active Beta Virtual Orbs", (char *) Cb_vir->pointer(h)[0],
+                    nsopi[h]*bvirpi[h]*sizeof(double), next, &next);
+  }
+  else {
+    View VCa_occ(ref->Ca(), nsopi, occpi, zero, frdocc);
+    Ca_occ = VCa_occ();
+    Ca_occ->set_name("Occupied orbitals");
+
+    next = PSIO_ZERO;
+    for(int h=0; h < nirreps; h++)
+      if(occpi[h])
+        psio->write(PSIF_CC_INFO, "RHF/ROHF Active Occupied Orbitals", (char *) Ca_occ->pointer(h)[0],
+                    nsopi[h]*occpi[h]*sizeof(double), next, &next);
+
+    View VCa_vir(ref->Ca(), nsopi, virpi, zero, frdocc+occpi-openpi);
+    Ca_vir = VCa_vir();
+    Ca_vir->set_name("Virtual orbitals");
+
+    next = PSIO_ZERO;
+    for(int h=0; h < nirreps; h++)
+      if(virpi[h])
+        psio->write(PSIF_CC_INFO, "RHF/ROHF Active Virtual Orbitals", (char *) Ca_vir->pointer(h)[0],
+                    nsopi[h]*virpi[h]*sizeof(double), next, &next);
+  }
+
+  dpd_close(0);
+  if(reference == 2) cachedone_uhf(cachelist);
+  else cachedone_rhf(cachelist);
+  free(cachefiles);
 
   for(int i=PSIF_CC_MIN; i < PSIF_CC_TMP; i++) psio->close(i,1);
   for(int i=PSIF_CC_TMP; i <= PSIF_CC_TMP11; i++) psio->close(i,0); /* delete CC_TMP files */

@@ -20,7 +20,7 @@
  *@END LICENSE
  */
 
-#include <vector>
+#include <libmints/mints.h>
 #include <libdpd/dpd.h>
 
 namespace psi { namespace cctransort {
@@ -95,7 +95,7 @@ void denom_uhf()
 	      int asym = d2.params->rsym[a];
 	      int bsym = d2.params->ssym[b];
 	      int A = a - d2.params->roff[asym];
-	      int B = b - d2.params->roff[bsym];
+	      int B = b - d2.params->soff[bsym];
 	      double faa = fAB.matrix[asym][A][A];
 	      double fbb = fAB.matrix[bsym][B][B];
 
@@ -126,7 +126,7 @@ void denom_uhf()
               int asym = d2.params->rsym[a];
               int bsym = d2.params->ssym[b];
               int A = a - d2.params->roff[asym];
-              int B = b - d2.params->roff[bsym];
+              int B = b - d2.params->soff[bsym];
               double faa = fab.matrix[asym][A][A];
               double fbb = fab.matrix[bsym][B][B];
 
@@ -157,7 +157,7 @@ void denom_uhf()
               int asym = d2.params->rsym[a];
               int bsym = d2.params->ssym[b];
               int A = a - d2.params->roff[asym];
-              int B = b - d2.params->roff[bsym];
+              int B = b - d2.params->soff[bsym];
               double faa = fAB.matrix[asym][A][A];
               double fbb = fab.matrix[bsym][B][B];
 
@@ -179,7 +179,7 @@ void denom_uhf()
   global_dpd_->file2_close(&fab);
 }
 
-void denom_rhf(vector<int> &openpi)
+void denom_rhf(Dimension &openpi)
 {
   dpdfile2 fIJ, fij, fAB, fab;
   dpdfile2 d1;

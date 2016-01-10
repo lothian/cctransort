@@ -1,10 +1,11 @@
 #include <vector>
 #include <psifiles.h>
+#include <libmints/mints.h>
 #include <libdpd/dpd.h>
 
 namespace psi { namespace cctransort {
 
-double scf_check(int reference, vector<int> &openpi)
+double scf_check(int reference, Dimension &openpi)
 {
   dpdfile2 f;
   dpdbuf4 A;
