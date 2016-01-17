@@ -47,6 +47,8 @@ void cachedone_rhf(int **cachelist);
 
 void memcheck(int reference);
 
+vector<int> & pitzer2qt(int nirreps, Dimension nmopi, Dimension doccpi, Dimension soccpi, Dimension frzcpi, Dimension frzvpi);
+
 void sort_tei_rhf(boost::shared_ptr<PSIO> psio, int print);
 void sort_tei_uhf(boost::shared_ptr<PSIO> psio, int print);
 
@@ -125,6 +127,8 @@ PsiReturnType cctransort(Options& options)
   Dimension clsdpi = ref->doccpi();
   Dimension frdocc = ref->frzcpi();
   Dimension fruocc = ref->frzvpi();
+
+  vector<int> pitz2qt = pitzer2qt(nirreps, nmopi, clsdpi, openpi, frdocc, fruocc);
 
   int nfzc = 0; int nfzv = 0;
   for(int h=0; h < nirreps; h++) { nfzc += frdocc[h]; nfzv += fruocc[h]; }
@@ -381,6 +385,19 @@ PsiReturnType cctransort(Options& options)
   if(reference == 2) sort_tei_uhf(psio, print);
   else sort_tei_rhf(psio, print);
   psio->close(PSIF_LIBTRANS_DPD, 0); // delete file
+
+  // cc2pitzer should take a CC-ordered (absolute) index and return the Pitzer (absolute) index
+/*
+  int ntri_all = nmo * (nmo + 1)/2;
+  double *tmp_oei = init_array(ntri_all);
+  iwl_rdone(PSIF_OEI, PSIF_MO_FZC, tmp_oei, ntri_all, 0, 1, "outfile");
+  for(int h=0; h < nirreps; h++) {
+    for(int i=0; i < occpi[h]; i++) { // active occupied only
+      // translate to pitzer
+      I = nfzc + occ_off[h]
+    }
+  }
+*/
 
   for(int i =PSIF_CC_MIN; i <= PSIF_CC_MAX; i++) psio->open(i,1);
 

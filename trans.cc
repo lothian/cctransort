@@ -44,7 +44,11 @@ double trans(boost::shared_ptr<Wavefunction> ref, Options& options, std::vector<
   outfile->Printf("\t(VV|VV)...\n");
   ints->transform_tei(MOSpace::vir, MOSpace::vir, MOSpace::vir, MOSpace::vir, IntegralTransform::ReadAndNuke);
 
-  return ints->get_frozen_core_energy();
+  double efzc = ints->get_frozen_core_energy();
+
+  delete ints;
+
+  return efzc;
 }
 
 }} // namespace psi::cctransort

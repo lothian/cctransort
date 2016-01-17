@@ -1,8 +1,8 @@
 
 # PYTHONPATH must include directory above plugin directory.
 #     Define either externally or here, then import plugin.
-#sys.path.insert(0, './..')
-#import cctransort
+sys.path.insert(0, './..')
+import cctransort
 
 molecule {
 0 1
@@ -23,7 +23,7 @@ set {
   d_convergence 13
 }
 
-#energy('cctransort')
+energy('cctransort')
 #psi4.ccenergy()
-energy('ccsd')
+#energy('ccsd')
 
