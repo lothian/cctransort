@@ -23,7 +23,7 @@ set {
   d_convergence 13
 }
 
-energy('cctransort')
+#energy('cctransort')
 #psi4.ccenergy()
-#energy('ccsd')
+energy('ccsd')
 

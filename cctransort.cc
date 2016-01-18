@@ -49,8 +49,6 @@ void cachedone_rhf(int **cachelist);
 void memcheck(int reference);
 
 vector<int> pitzer2qt(vector<Dimension> &spaces); 
-// Dimension doccpi, Dimension soccpi, Dimension uoccpi, Dimension frzcpi, Dimension frzvpi);
-// vector<int> pitzer2qt_uhf(Dimension occpi, Dimension uoccpi, Dimension frzcpi, Dimension frzvpi);
 
 void sort_tei_rhf(boost::shared_ptr<PSIO> psio, int print);
 void sort_tei_uhf(boost::shared_ptr<PSIO> psio, int print);
@@ -309,11 +307,6 @@ PsiReturnType cctransort(Options& options)
         vir_sym[count] = h;
       }
     }
-
-    for(int i=0; i < nactive; i++)
-      outfile->Printf("cc_occ[%d] = %d\n", i, cc_occ[i]);
-    for(int i=0; i < nactive; i++)
-      outfile->Printf("qt_occ[%d] = %d\n", i, qt_occ[i]);
 
     psio->write_entry(PSIF_CC_INFO, "Active Occ Orbs Per Irrep", (char *) (int *) occpi, sizeof(int)*nirreps);
     psio->write_entry(PSIF_CC_INFO, "Active Virt Orbs Per Irrep", (char *) (int *) virpi, sizeof(int)*nirreps);

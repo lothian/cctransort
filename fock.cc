@@ -20,10 +20,6 @@
  *@END LICENSE
  */
 
-/*! \file
-    \ingroup CCSORT
-    \brief Enter brief description of file here 
-*/
 #include <libdpd/dpd.h>
 #include <libmints/mints.h>
 

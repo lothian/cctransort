@@ -20,10 +20,6 @@
  *@END LICENSE
  */
 
-/*! \file
-    \ingroup CCSORT
-    \brief Enter brief description of file here 
-*/
 #include <cstdio>
 #include <cstdlib>
 #include <libciomr/libciomr.h>
