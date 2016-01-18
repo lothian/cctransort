@@ -5,7 +5,7 @@ sys.path.insert(0, './..')
 import cctransort
 
 molecule {
-0 1
+1 2
 O
 H 1 R
 H 1 R 2 A
@@ -17,7 +17,8 @@ A = 104.5
 set {
   basis sto-3g
   freeze_core true
-  reference rhf
+  reference rohf
+  wfn = "CCSD_T"
   r_convergence 13
   e_convergence 13
   d_convergence 13
@@ -25,5 +26,5 @@ set {
 
 #energy('cctransort')
 #psi4.ccenergy()
-energy('ccsd')
+energy('ccsd(t)')
 

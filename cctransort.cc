@@ -324,10 +324,14 @@ PsiReturnType cctransort(Options& options)
 
   outfile->Printf("\n\tWfn Parameters:\n");
   outfile->Printf("\t--------------------\n");
-  outfile->Printf("\tPrint Level          = %d\n",print);
-  outfile->Printf("\tNumber of irreps     = %d\n",nirreps);
-  outfile->Printf("\tNumber of MOs        = %d\n",nmo);
-  outfile->Printf("\tNumber of active MOs = %d\n",nactive);
+  outfile->Printf("\tWavefunction         = %s\n", options.get_str("WFN").c_str());
+  outfile->Printf("\tNumber of irreps     = %d\n", nirreps);
+  outfile->Printf("\tNumber of MOs        = %d\n", nmo);
+  outfile->Printf("\tNumber of active MOs = %d\n", nactive);
+  outfile->Printf("\tReference            = %s\n", reference == 2 ? "UHF" : (reference == 1 ? "ROHF" : "RHF"));
+  outfile->Printf("\tSemicanonical        = %s\n", semicanonical ? "true" : "false");
+  outfile->Printf("\tPrint Level          = %d\n", print);
+
   outfile->Printf("\tIRREP\t# MOs\t# FZDC\t# DOCC\t# SOCC\t# VIRT\t# FZVR\n");
   outfile->Printf(
             "\t-----\t-----\t------\t------\t------\t------\t------\n");
