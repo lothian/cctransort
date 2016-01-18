@@ -342,8 +342,6 @@ PsiReturnType cctransort(Options& options)
     outfile->Printf("\t %s\t   %d\t    %d\t    %d\t    %d\t    %d\t    %d\n",
                     labels[i],nmopi[i],frzcpi[i],clsdpi[i],openpi[i],uoccpi[i],frzvpi[i]);
   }
-  outfile->Printf("\tNuclear Rep. energy    =  %20.14f\n", enuc);
-  outfile->Printf(  "\tSCF energy             =  %20.14f\n", escf);
 
   // Transformation
 
@@ -411,44 +409,161 @@ PsiReturnType cctransort(Options& options)
   else sort_tei_rhf(psio, print);
   psio->close(PSIF_LIBTRANS_DPD, 0); // delete file
 
+  for(int i =PSIF_CC_MIN; i <= PSIF_CC_MAX; i++) psio->open(i,1);
+
   // Sort one-electron integals into three main categories
-  int ntri_all = nmo * (nmo + 1)/2;
-  double *tmp_oei = init_array(ntri_all);
-  iwl_rdone(PSIF_OEI, PSIF_MO_FZC, tmp_oei, ntri_all, 0, 1, "outfile");
 
-  dpdfile2 Hoo, Hov, Hvv;
-  global_dpd_->file2_init(&Hoo, PSIF_CC_OEI, 0, 0, 0, "h(i,j)");
-  global_dpd_->file2_init(&Hvv, PSIF_CC_OEI, 0, 1, 1, "h(a,b)");
-  global_dpd_->file2_init(&Hov, PSIF_CC_OEI, 0, 0, 1, "h(i,a)");
-  global_dpd_->file2_mat_init(&Hoo);
-  global_dpd_->file2_mat_init(&Hvv);
-  global_dpd_->file2_mat_init(&Hov);
+  if(reference == 2) { // UHF/Semicanonical
+    dpdfile2 H;
+    int ntri_all = nmo * (nmo + 1)/2;
+    double *tmp_oei = init_array(ntri_all);
 
-  for(int h=0; h < nirreps; h++) {
-    for(int i=0; i < occpi[h]; i++) {
-      int I = qt2p[qt_occ[occ_off[h] + i]];
-//      outfile->Printf("Irrep = %d; OCC = %d; QT = %d; Pitzer = %d\n", h, i, qt_occ[occ_off[h] + i], qt2p[qt_occ[occ_off[h] + i]]);
-      for(int j=0; j < occpi[h]; j++) {
-        int J = qt2p[qt_occ[occ_off[h] + i]];
-        Hoo.matrix[h][i][j] = tmp_oei[INDEX(I,J)];
+    iwl_rdone(PSIF_OEI, PSIF_MO_A_FZC, tmp_oei, ntri_all, 0, 0, "outfile");
+
+    global_dpd_->file2_init(&H, PSIF_CC_OEI, 0, 0, 0, "h(I,J)");
+    global_dpd_->file2_mat_init(&H);
+    for(int h=0; h < nirreps; h++) {
+      for(int i=0; i < aoccpi[h]; i++) {
+        for(int j=0; j < aoccpi[h]; j++) {
+          int I = qt2p_a[qt_aocc[aocc_off[h] + i]];
+          int J = qt2p_a[qt_aocc[aocc_off[h] + j]];
+          H.matrix[h][i][j] = tmp_oei[INDEX(I,J)];
+        }
       }
     }
+    global_dpd_->file2_mat_wrt(&H);
+    global_dpd_->file2_mat_close(&H);
+    global_dpd_->file2_close(&H);
+
+    global_dpd_->file2_init(&H, PSIF_CC_OEI, 0, 1, 1, "h(A,B)");
+    global_dpd_->file2_mat_init(&H);
+    for(int h=0; h < nirreps; h++) {
+      for(int a=0; a < avirpi[h]; a++) {
+        for(int b=0; b < avirpi[h]; b++) {
+          int A = qt2p_a[qt_avir[avir_off[h] + a]];
+          int B = qt2p_a[qt_avir[avir_off[h] + b]];
+          H.matrix[h][a][b] = tmp_oei[INDEX(A,B)];
+        }
+      }
+    }
+    global_dpd_->file2_mat_wrt(&H);
+    global_dpd_->file2_mat_close(&H);
+    global_dpd_->file2_close(&H);
+
+    global_dpd_->file2_init(&H, PSIF_CC_OEI, 0, 0, 1, "h(I,A)");
+    global_dpd_->file2_mat_init(&H);
+    for(int h=0; h < nirreps; h++) {
+      for(int i=0; i < aoccpi[h]; i++) {
+        for(int a=0; a < avirpi[h]; a++) {
+          int I = qt2p_a[qt_aocc[aocc_off[h] + i]];
+          int A = qt2p_a[qt_avir[avir_off[h] + a]];
+          H.matrix[h][i][a] = tmp_oei[INDEX(I,A)];
+        }
+      }
+    }
+    global_dpd_->file2_mat_wrt(&H);
+    global_dpd_->file2_mat_close(&H);
+    global_dpd_->file2_close(&H);
+
+    iwl_rdone(PSIF_OEI, PSIF_MO_B_FZC, tmp_oei, ntri_all, 0, 0, "outfile");
+
+    global_dpd_->file2_init(&H, PSIF_CC_OEI, 0, 2, 2, "h(i,j)");
+    global_dpd_->file2_mat_init(&H);
+    for(int h=0; h < nirreps; h++) {
+      for(int i=0; i < boccpi[h]; i++) {
+        for(int j=0; j < boccpi[h]; j++) {
+          int I = qt2p_b[qt_bocc[bocc_off[h] + i]];
+          int J = qt2p_b[qt_bocc[bocc_off[h] + j]];
+          H.matrix[h][i][j] = tmp_oei[INDEX(I,J)];
+        }
+      }
+    }
+    global_dpd_->file2_mat_wrt(&H);
+    global_dpd_->file2_mat_close(&H);
+    global_dpd_->file2_close(&H);
+
+    global_dpd_->file2_init(&H, PSIF_CC_OEI, 0, 3, 3, "h(a,b)");
+    global_dpd_->file2_mat_init(&H);
+    for(int h=0; h < nirreps; h++) {
+      for(int a=0; a < bvirpi[h]; a++) {
+        for(int b=0; b < bvirpi[h]; b++) {
+          int A = qt2p_b[qt_bvir[bvir_off[h] + a]];
+          int B = qt2p_b[qt_bvir[bvir_off[h] + b]];
+          H.matrix[h][a][b] = tmp_oei[INDEX(A,B)];
+        }
+      }
+    }
+    global_dpd_->file2_mat_wrt(&H);
+    global_dpd_->file2_mat_close(&H);
+    global_dpd_->file2_close(&H);
+
+    global_dpd_->file2_init(&H, PSIF_CC_OEI, 0, 2, 3, "h(i,a)");
+    global_dpd_->file2_mat_init(&H);
+    for(int h=0; h < nirreps; h++) {
+      for(int i=0; i < boccpi[h]; i++) {
+        for(int a=0; a < bvirpi[h]; a++) {
+          int I = qt2p_b[qt_bocc[bocc_off[h] + i]];
+          int A = qt2p_b[qt_bvir[bvir_off[h] + a]];
+          H.matrix[h][i][a] = tmp_oei[INDEX(I,A)];
+        }
+      }
+    }
+    global_dpd_->file2_mat_wrt(&H);
+    global_dpd_->file2_mat_close(&H);
+    global_dpd_->file2_close(&H);
   }
+  else { // RHF/ROHF
+    dpdfile2 H;
+    int ntri_all = nmo * (nmo + 1)/2;
+    double *tmp_oei = init_array(ntri_all);
 
-  global_dpd_->file2_mat_wrt(&Hoo);
-  global_dpd_->file2_mat_wrt(&Hvv);
-  global_dpd_->file2_mat_wrt(&Hov);
+    iwl_rdone(PSIF_OEI, PSIF_MO_FZC, tmp_oei, ntri_all, 0, 0, "outfile");
 
-  global_dpd_->file2_mat_close(&Hoo);
-  global_dpd_->file2_mat_close(&Hvv);
-  global_dpd_->file2_mat_close(&Hov);
+    global_dpd_->file2_init(&H, PSIF_CC_OEI, 0, 0, 0, "h(i,j)");
+    global_dpd_->file2_mat_init(&H);
+    for(int h=0; h < nirreps; h++) {
+      for(int i=0; i < occpi[h]; i++) {
+        for(int j=0; j < occpi[h]; j++) {
+          int I = qt2p[qt_occ[occ_off[h] + i]];
+          int J = qt2p[qt_occ[occ_off[h] + j]];
+          H.matrix[h][i][j] = tmp_oei[INDEX(I,J)];
+        }
+      }
+    }
+    global_dpd_->file2_mat_wrt(&H);
+    global_dpd_->file2_mat_close(&H);
+    global_dpd_->file2_close(&H);
 
-  global_dpd_->file2_print(&Hoo, "outfile");
-  global_dpd_->file2_close(&Hoo);
-  global_dpd_->file2_close(&Hvv);
-  global_dpd_->file2_close(&Hov);
-
-  for(int i =PSIF_CC_MIN; i <= PSIF_CC_MAX; i++) psio->open(i,1);
+    global_dpd_->file2_init(&H, PSIF_CC_OEI, 0, 1, 1, "h(a,b)");
+    global_dpd_->file2_mat_init(&H);
+    for(int h=0; h < nirreps; h++) {
+      for(int a=0; a < virpi[h]; a++) {
+        for(int b=0; b < virpi[h]; b++) {
+          int A = qt2p[qt_vir[vir_off[h] + a]];
+          int B = qt2p[qt_vir[vir_off[h] + b]];
+          H.matrix[h][a][b] = tmp_oei[INDEX(A,B)];
+        }
+      }
+    }
+    global_dpd_->file2_mat_wrt(&H);
+    global_dpd_->file2_mat_close(&H);
+    global_dpd_->file2_close(&H);
+  
+    global_dpd_->file2_init(&H, PSIF_CC_OEI, 0, 0, 1, "h(i,a)");
+    global_dpd_->file2_mat_init(&H);
+    for(int h=0; h < nirreps; h++) {
+      for(int i=0; i < occpi[h]; i++) {
+        for(int a=0; a < virpi[h]; a++) {
+          int I = qt2p[qt_occ[occ_off[h] + i]];
+          int A = qt2p[qt_vir[vir_off[h] + a]];
+          H.matrix[h][i][a] = tmp_oei[INDEX(I,A)];
+        }
+      }
+    }
+    global_dpd_->file2_mat_wrt(&H);
+    global_dpd_->file2_mat_close(&H);
+    global_dpd_->file2_close(&H);
+  }
 
   // Generate additional orderings of basic integrals
   c_sort(reference);
@@ -469,8 +584,10 @@ PsiReturnType cctransort(Options& options)
   if(reference == 2) denom_uhf();
   else denom_rhf(openpi);
 
+  outfile->Printf("\tNuclear Rep. energy    =  %20.14f\n", enuc);
+  outfile->Printf("\tSCF energy             =  %20.14f\n", escf);
   double eref = scf_check(reference, openpi) + enuc + efzc;
-  outfile->Printf("\tReference energy       = %20.14f\n", eref);
+  outfile->Printf("\tReference energy       =  %20.14f\n", eref);
   psio->write_entry(PSIF_CC_INFO, "Reference Energy", (char *) &(eref), sizeof(double));
 
   SharedMatrix Ca_vir, Cb_vir, Ca_occ;
