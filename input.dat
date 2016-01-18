@@ -5,7 +5,7 @@ sys.path.insert(0, './..')
 import cctransort
 
 molecule {
-1 2
+0 1
 O
 H 1 R
 H 1 R 2 A
@@ -17,7 +17,7 @@ A = 104.5
 set {
   basis sto-3g
   freeze_core true
-  reference uhf
+  reference rhf
   r_convergence 13
   e_convergence 13
   d_convergence 13

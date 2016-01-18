@@ -29,6 +29,7 @@
 #include <libmints/view.h>
 #include <libpsio/psio.hpp>
 #include <libciomr/libciomr.h>
+#include <libiwl/iwl.h>
 #include <libqt/qt.h>
 #include <libtrans/integraltransform.h>
 #include <libdpd/dpd.h>
@@ -148,14 +149,14 @@ PsiReturnType cctransort(Options& options)
     subspaces.push_back(avirpi);
     subspaces.push_back(frzvpi);
     p2qt_a = pitzer2qt(subspaces);
-    for(int i=0; i < nmo; i++) qt2p_a[p2qt_a] = i;
+    for(int i=0; i < nmo; i++) qt2p_a[p2qt_a[i]] = i;
     subspaces.clear();
     subspaces.push_back(frzcpi);
     subspaces.push_back(boccpi);
     subspaces.push_back(bvirpi);
     subspaces.push_back(frzvpi);
     p2qt_b = pitzer2qt(subspaces);
-    for(int i=0; i < nmo; i++) qt2p_b[p2qt_b] = i;
+    for(int i=0; i < nmo; i++) qt2p_b[p2qt_b[i]] = i;
   }
   else {
     subspaces.push_back(frzcpi);
@@ -164,7 +165,7 @@ PsiReturnType cctransort(Options& options)
     subspaces.push_back(uoccpi);
     subspaces.push_back(frzvpi);
     p2qt = pitzer2qt(subspaces);
-    for(int i=0; i < nmo; i++) qt2p[p2qt] = i;
+    for(int i=0; i < nmo; i++) qt2p[p2qt[i]] = i;
   }
 
   int nfzc = frzcpi.sum();
@@ -309,6 +310,11 @@ PsiReturnType cctransort(Options& options)
       }
     }
 
+    for(int i=0; i < nactive; i++)
+      outfile->Printf("cc_occ[%d] = %d\n", i, cc_occ[i]);
+    for(int i=0; i < nactive; i++)
+      outfile->Printf("qt_occ[%d] = %d\n", i, qt_occ[i]);
+
     psio->write_entry(PSIF_CC_INFO, "Active Occ Orbs Per Irrep", (char *) (int *) occpi, sizeof(int)*nirreps);
     psio->write_entry(PSIF_CC_INFO, "Active Virt Orbs Per Irrep", (char *) (int *) virpi, sizeof(int)*nirreps);
     psio->write_entry(PSIF_CC_INFO, "Active Occ Orb Offsets", (char *) occ_off.data(), sizeof(int)*nirreps);
@@ -409,11 +415,38 @@ PsiReturnType cctransort(Options& options)
   int ntri_all = nmo * (nmo + 1)/2;
   double *tmp_oei = init_array(ntri_all);
   iwl_rdone(PSIF_OEI, PSIF_MO_FZC, tmp_oei, ntri_all, 0, 1, "outfile");
+
+  dpdfile2 Hoo, Hov, Hvv;
+  global_dpd_->file2_init(&Hoo, PSIF_CC_OEI, 0, 0, 0, "h(i,j)");
+  global_dpd_->file2_init(&Hvv, PSIF_CC_OEI, 0, 1, 1, "h(a,b)");
+  global_dpd_->file2_init(&Hov, PSIF_CC_OEI, 0, 0, 1, "h(i,a)");
+  global_dpd_->file2_mat_init(&Hoo);
+  global_dpd_->file2_mat_init(&Hvv);
+  global_dpd_->file2_mat_init(&Hov);
+
   for(int h=0; h < nirreps; h++) {
     for(int i=0; i < occpi[h]; i++) {
-      qt2p[nfzc + qt_occ[nfzc + occ_off[h] + i] ]
+      int I = qt2p[qt_occ[occ_off[h] + i]];
+//      outfile->Printf("Irrep = %d; OCC = %d; QT = %d; Pitzer = %d\n", h, i, qt_occ[occ_off[h] + i], qt2p[qt_occ[occ_off[h] + i]]);
+      for(int j=0; j < occpi[h]; j++) {
+        int J = qt2p[qt_occ[occ_off[h] + i]];
+        Hoo.matrix[h][i][j] = tmp_oei[INDEX(I,J)];
+      }
     }
   }
+
+  global_dpd_->file2_mat_wrt(&Hoo);
+  global_dpd_->file2_mat_wrt(&Hvv);
+  global_dpd_->file2_mat_wrt(&Hov);
+
+  global_dpd_->file2_mat_close(&Hoo);
+  global_dpd_->file2_mat_close(&Hvv);
+  global_dpd_->file2_mat_close(&Hov);
+
+  global_dpd_->file2_print(&Hoo, "outfile");
+  global_dpd_->file2_close(&Hoo);
+  global_dpd_->file2_close(&Hvv);
+  global_dpd_->file2_close(&Hov);
 
   for(int i =PSIF_CC_MIN; i <= PSIF_CC_MAX; i++) psio->open(i,1);
 
