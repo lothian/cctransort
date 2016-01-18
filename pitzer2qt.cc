@@ -5,41 +5,33 @@ using namespace std;
 
 namespace psi { namespace cctransort {
 
-vector<int> & pitzer2qt(int nirreps, Dimension nmopi, Dimension doccpi, Dimension soccpi, Dimension frzcpi, Dimension frzvpi)
+vector<int> pitzer2qt(vector<Dimension> &spaces)
 {
-  vector<int> order;
+  int nirreps = spaces[0].n();
+
+  Dimension total(nirreps);
+  for(int h=0; h < nirreps; h++)
+    for(int i=0; i < spaces.size(); i++)
+      total[h] += spaces[i][h];
+  int nmo = total.sum();
+
+  vector<int> order(nmo);
+  order.assign(nmo, 0);
 
   Dimension offset(nirreps);
   offset[0] = 0;
   for(int h=1; h < nirreps; h++)
-    offset[h] = offset[h-1] + nmopi[h-1];
+    offset[h] = offset[h-1] + total[h-1];
 
-  int count = 0; 
+  int count = 0;
 
-  // frozen core orbitals
-  for(int h=0; h < nirreps; h++)
-    for(int i=0; i < frzcpi[h]; i++)
-      order[offset[h]+i] = count++;
-
-  // doubly occupied orbitals
-  for(int h=0; h < nirreps; h++)
-    for(int i=0; i < (doccpi[h] - frzcpi[h]); i++) // NB: doccpi includes the frozen core orbitals
-      order[offset[h]+frzcpi[h]+i] = count++;
-
-  // singly occupied orbitals
-  for(int h=0; h < nirreps; h++)
-    for(int i=0; i < soccpi[h]; i++)
-      order[offset[h]+doccpi[h]+i] = count++;
-
-  // unoccpied orbitals
-  for(int h=0; h < nirreps; h++)
-    for(int i=0; i < (nmopi[h]-doccpi[h]-soccpi[h]-frzvpi[h]); i++)
-      order[offset[h]+doccpi[h]+soccpi[h]+i] = count++;
-
-  // frozen virtual orbitals
-  for(int h=0; h < nirreps; h++)
-    for(int i=0; i < frzvpi[h]; i++)
-      order[offset[h]+nmopi[h]-frzvpi[h]+i] = count++;
+  for(int j=0; j < spaces.size(); j++)
+    for(int h=0; h < nirreps; h++) {
+      int this_offset = offset[h];
+      for(int k=0; k < j; k++) this_offset += spaces[k][h];
+      for(int i=0; i < spaces[j][h]; i++) 
+      order[this_offset + i] = count++;
+    }
 
   return order;
 }
